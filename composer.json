@@ -11,14 +11,15 @@
     ],
     "minimum-stability": "stable",
     "require": {
-        "php": ">= 5.4.0",
-        "nette/security": "^2.3",
-        "nette/http": "^2.3",
-        "firebase/php-jwt": "^3.0",
-        "nette/di": "^2.3"
+        "php": ">=7.2",
+        "nette/security": "^3.0",
+        "nette/http": "^3.0",
+        "firebase/php-jwt": "^3.0|^4.0|^5.0"
     },
     "require-dev": {
-        "nette/tester": "^1.5"
+        "nette/di": "^3.0",
+        "nette/tester": "^2.3",
+        "vimeo/psalm": "^3.8"
     },
     "autoload": {
         "psr-0": {

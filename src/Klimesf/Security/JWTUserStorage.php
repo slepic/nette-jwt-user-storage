@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Klimesf\Security;
 
 use Firebase\JWT\ExpiredException;
@@ -64,12 +66,12 @@ class JWTUserStorage implements IUserStorage
 	private $jwtData = array();
 
 	/**
-	 * @var string
+	 * @var string|null
 	 */
 	private $expirationTime;
 
 	/**
-	 * @var int
+	 * @var int|null
 	 */
 	private $logoutReason;
 
@@ -79,22 +81,22 @@ class JWTUserStorage implements IUserStorage
 	private $identitySerializer;
 
 	/**
-	 * @var string
+	 * @var string|null
 	 */
 	private $cookiePath;
 
 	/**
-	 * @var string
+	 * @var string|null
 	 */
 	private $cookieDomain;
 
 	/**
-	 * @var bool
+	 * @var bool|null
 	 */
 	private $cookieSecure;
 
 	/**
-	 * @var bool
+	 * @var bool|null
 	 */
 	private $cookieHttpOnly;
 
@@ -104,7 +106,7 @@ class JWTUserStorage implements IUserStorage
 	private $cookieName;
 
 	/**
-	 * @var IIdentity
+	 * @var IIdentity|null
 	 */
 	private $identity;
 
@@ -113,31 +115,18 @@ class JWTUserStorage implements IUserStorage
 	 */
 	private $isLoaded = false;
 
-	/**
-	 * @param string $privateKey
-	 * @param string $algorithm
-	 * @param IRequest $request
-	 * @param IResponse $response
-	 * @param IJsonWebTokenService $jsonWebTokenService
-	 * @param IIdentitySerializer $identitySerializer
-	 * @param string|null $cookiePath
-	 * @param string|null $cookieDomain
-	 * @param bool|null $cookieSecure
-	 * @param bool|null $cookieHttpOnly
-	 * @param string|null $cookieName
-	 */
 	public function __construct(
-		$privateKey,
-		$algorithm,
+		string $privateKey,
+		string $algorithm,
 		IRequest $request,
 		IResponse $response,
 		IJsonWebTokenService $jsonWebTokenService,
 		IIdentitySerializer $identitySerializer,
-		$cookiePath = null,
-		$cookieDomain = null,
-		$cookieSecure = null,
-		$cookieHttpOnly = null,
-		$cookieName = null
+		?string $cookiePath = null,
+		?string $cookieDomain = null,
+		?bool $cookieSecure = null,
+		?bool $cookieHttpOnly = null,
+		?string $cookieName = null
 	) {
 		$this->privateKey = $privateKey;
 		$this->algorithm = $algorithm;
@@ -152,28 +141,17 @@ class JWTUserStorage implements IUserStorage
 		$this->cookieName = $cookieName ?: 'jwt_access_token';
 	}
 
-	/**
-	 * @param boolean $generateJti
-	 */
-	public function setGenerateJti($generateJti)
+	public function setGenerateJti(bool $generateJti): void
 	{
 		$this->generateJti = $generateJti;
 	}
 
-	/**
-	 * @param boolean $generateIat
-	 */
-	public function setGenerateIat($generateIat)
+	public function setGenerateIat(bool $generateIat): void
 	{
 		$this->generateIat = $generateIat;
 	}
 
-	/**
-	 * Sets the authenticated status of this user.
-	 * @param  bool
-	 * @return static
-	 */
-	public function setAuthenticated($state)
+	public function setAuthenticated(bool $state): self
 	{
 		$this->loadJWTCookie();
 		$this->jwtData['is_authenticated'] = $state;
@@ -184,40 +162,26 @@ class JWTUserStorage implements IUserStorage
 		return $this;
 	}
 
-	/**
-	 * Is this user authenticated?
-	 * @return bool
-	 */
-	public function isAuthenticated()
+	public function isAuthenticated(): bool
 	{
 		$this->loadJWTCookie();
 		return array_key_exists('is_authenticated', $this->jwtData) ? $this->jwtData['is_authenticated'] : false;
 	}
 
-	/**
-	 * Sets the user identity.
-	 *
-	 * @param IIdentity|null $identity
-	 * @return static
-	 */
-	public function setIdentity(IIdentity $identity = null)
+	public function setIdentity(IIdentity $identity = null): self
 	{
 		$this->loadJWTCookie();
 		if (!$identity) {
 			$this->jwtData = ['is_authenticated' => false];
-			return;
+		} else {
+			$this->jwtData = array_merge($this->jwtData, $this->identitySerializer->serialize($identity));
+			$this->identity = $identity;
+			$this->saveJWTCookie();
 		}
-		$this->jwtData = array_merge($this->jwtData, $this->identitySerializer->serialize($identity));
-		$this->identity = $identity;
-		$this->saveJWTCookie();
 		return $this;
 	}
 
-	/**
-	 * Returns current user identity, if any.
-	 * @return IIdentity|NULL
-	 */
-	public function getIdentity()
+	public function getIdentity(): ?IIdentity
 	{
 		$this->loadJWTCookie();
 		if ($this->identity) {
@@ -226,16 +190,10 @@ class JWTUserStorage implements IUserStorage
 		return empty($this->jwtData) ? null : $this->identitySerializer->deserialize($this->jwtData);
 	}
 
-	/**
-	 * Enables log out from the persistent storage after inactivity.
-	 * @param  string|int|\DateTime $time number of seconds or timestamp
-	 * @param int $flags Log out when the browser is closed | Clear the identity from persistent storage?
-	 * @return static
-	 */
-	public function setExpiration($time, $flags = 0)
+	public function setExpiration(?string $time, int $flags = 0): self
 	{
 		$this->loadJWTCookie();
-		$this->expirationTime = $flags & self::BROWSER_CLOSED ? 0 : $time;
+		$this->expirationTime = $time;
 		if ($time) {
 			$time = DateTime::from($time)->format('U');
 			$this->jwtData['exp'] = $time;
@@ -246,11 +204,7 @@ class JWTUserStorage implements IUserStorage
 		return $this;
 	}
 
-	/**
-	 * Why was user logged out?
-	 * @return int
-	 */
-	public function getLogoutReason()
+	public function getLogoutReason(): ?int
 	{
 		$this->loadJWTCookie();
 		return $this->logoutReason;
@@ -259,7 +213,7 @@ class JWTUserStorage implements IUserStorage
 	/**
 	 * Saves the JWT Access Token into HTTP cookie.
 	 */
-	private function saveJWTCookie()
+	private function saveJWTCookie(): void
 	{
 		if (!$this->isLoaded) {
 			throw new \Exception("Invalid call of saveJWTCookie. First must be called loadJWTCookie");
@@ -281,13 +235,13 @@ class JWTUserStorage implements IUserStorage
 
 		// Encode the JWT and set the cookie
 		$jwt = $this->jwtService->encode($this->jwtData, $this->privateKey, $this->algorithm);
-		$this->response->setCookie($this->cookieName, $jwt, $this->expirationTime, $this->cookiePath, $this->cookieDomain, $this->cookieSecure, $this->cookieHttpOnly);
+		$this->response->setCookie($this->cookieName, $jwt, $this->expirationTime ?? 0, $this->cookiePath, $this->cookieDomain, $this->cookieSecure, $this->cookieHttpOnly);
 	}
 
 	/**
 	 * Loads JWT from HTTP cookie and stores the data into the $jwtData variable.
 	 */
-	private function loadJWTCookie()
+	private function loadJWTCookie(): void
 	{
 		if ($this->isLoaded) {
 			return;
