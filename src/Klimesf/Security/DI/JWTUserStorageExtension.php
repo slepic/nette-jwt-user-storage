@@ -3,7 +3,9 @@
 
 namespace Klimesf\Security\DI;
 
+use Nette;
 use Nette\DI\CompilerExtension;
+use Nette\Schema\Expect;
 
 /**
  * Nette DI extension which registers JWTUserStorage.
@@ -12,29 +14,29 @@ use Nette\DI\CompilerExtension;
  */
 class JWTUserStorageExtension extends CompilerExtension
 {
-
-	private $defaults = [
-		'identitySerializer' => 'Klimesf\Security\IdentitySerializer',
-		'generateJti'        => true,
-		'generateIat'        => true,
-		'expiration'         => '20 days',
-	];
+	public function getConfigSchema(): Nette\Schema\Schema
+	{
+		return Expect::structure([
+			'identitySerializer' => Expect::string('Klimesf\Security\IdentitySerializer'),
+			'generateJti' => Expect::bool(true),
+			'generateIat' => Expect::bool(true),
+			'expiration' => Expect::string('20 days'),
+			'privateKey' => Expect::string()->required(),
+			'algorithm' => Expect::string()->required(),
+		]);
+	}
 
 	public function loadConfiguration()
 	{
 		$builder = $this->getContainerBuilder();
-		$config = $this->getConfig($this->defaults);
-		if (!array_key_exists('privateKey', $config) || !array_key_exists('algorithm', $config)) {
-			throw new \UnexpectedValueException("Please configure the JWTUserStorage extensions using the section " .
-				"'{$this->name}:' in your config file.");
-		}
+		$config = (array) $this->getConfig();
 
 		$builder->addDefinition($this->prefix('firebaseJWTWrapper'))
-			->setClass('Klimesf\Security\JWT\FirebaseJWTWrapper');
+			->setType('Klimesf\Security\JWT\FirebaseJWTWrapper');
 
 		$userStorageDefinition = $builder->addDefinition($this->prefix('jwtUserStorage'))
-			->setClass('Klimesf\Security\JWTUserStorage',
-				[$config['privateKey'], $config['algorithm']]);
+			->setType('Klimesf\Security\JWTUserStorage')
+			->setArguments([$config['privateKey'], $config['algorithm']]);
 		$userStorageDefinition->addSetup('setGenerateIat', [$config['generateIat']]);
 		$userStorageDefinition->addSetup('setGenerateJti', [$config['generateJti']]);
 
@@ -44,7 +46,7 @@ class JWTUserStorageExtension extends CompilerExtension
 		}
 
 		$builder->addDefinition($this->prefix('identitySerializer'))
-			->setClass($config['identitySerializer']);
+			->setType($config['identitySerializer']);
 
 		// Disable Nette's default IUserStorage implementation
 		$builder->getDefinition('security.userStorage')->setAutowired(false);

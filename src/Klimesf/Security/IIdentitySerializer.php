@@ -1,5 +1,6 @@
 <?php
 
+declare(strict_types=1);
 
 namespace Klimesf\Security;
 
@@ -20,14 +21,14 @@ interface IIdentitySerializer
 	 * @param IIdentity $identity
 	 * @return array
 	 */
-	public function serialize(IIdentity $identity);
+	public function serialize(IIdentity $identity): array;
 
 	/**
 	 * Deserializes the identity data from an array contained in the JWT and
 	 * loads into into IIdentity.
 	 * @param array $jwtData
-	 * @return IIdentity
+	 * @return IIdentity|null
 	 */
-	public function deserialize($jwtData);
+	public function deserialize($jwtData): ?IIdentity;
 
 }
