@@ -17,6 +17,15 @@ use UnexpectedValueException;
  */
 class FirebaseJWTWrapper implements IJsonWebTokenService
 {
+	/**
+	 * @var int
+	 */
+	private $leeway;
+
+	public function __construct(int $leeway = 0)
+	{
+		$this->leeway = $leeway;
+	}
 
 	/**
 	 * Converts and signs a PHP object or array into a JWT string.
@@ -55,6 +64,12 @@ class FirebaseJWTWrapper implements IJsonWebTokenService
 	 */
 	function decode(string $jwt, $key, array $allowed_algs = array()): object
 	{
-		return JWt::decode($jwt, $key, $allowed_algs);
+		$leeway = JWT::$leeway;
+		JWT::$leeway = $this->leeway;
+		try {
+			return JWT::decode($jwt, $key, $allowed_algs);
+		} finally {
+			JWT::$leeway = $leeway;
+		}
 	}
 }

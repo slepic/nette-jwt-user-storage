@@ -23,6 +23,7 @@ class JWTUserStorageExtension extends CompilerExtension
 			'expiration' => Expect::string('20 days'),
 			'privateKey' => Expect::string()->required(),
 			'algorithm' => Expect::string()->required(),
+			'jwtLeeway' => Expect::int(0),
 		]);
 	}
 
@@ -32,7 +33,8 @@ class JWTUserStorageExtension extends CompilerExtension
 		$config = (array) $this->getConfig();
 
 		$builder->addDefinition($this->prefix('firebaseJWTWrapper'))
-			->setType('Klimesf\Security\JWT\FirebaseJWTWrapper');
+			->setType('Klimesf\Security\JWT\FirebaseJWTWrapper')
+			->setArguments([isset($config['jwtLeeway']) ? ((int) $config['jwtLeeway']) : 0]);
 
 		$userStorageDefinition = $builder->addDefinition($this->prefix('jwtUserStorage'))
 			->setType('Klimesf\Security\JWTUserStorage')
